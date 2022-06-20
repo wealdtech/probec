@@ -3,7 +3,7 @@ module github.com/wealdtech/probec
 go 1.18
 
 require (
-	github.com/attestantio/go-eth2-client v0.11.4
+	github.com/attestantio/go-eth2-client v0.11.5
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.2
@@ -53,5 +53,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/attestantio/go-eth2-client => ../../attestantio/go-eth2-client

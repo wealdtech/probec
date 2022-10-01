@@ -74,6 +74,17 @@ func (s *Service) monitorEvents(ctx context.Context,
 	if err := eventsProvider.Events(ctx, []string{"block"}, func(event *apiv1.Event) {
 		data := event.Data.(*apiv1.BlockEvent)
 		delay := time.Since(s.chainTime.StartOfSlot(data.Slot))
+
+		// Ensure the node is synced.
+		syncing, err := eventsProvider.(consensusclient.NodeSyncingProvider).NodeSyncing(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to ascertain if node is syncing")
+			return
+		}
+		if syncing.IsSyncing {
+			log.Debug().Msg("Node is syncing, not sending information")
+		}
+
 		monitorEventProcessed(delay)
 
 		// Build and send the data.

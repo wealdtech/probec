@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	standardchaintime "github.com/wealdtech/chaind/services/chaintime/standard"
 	"github.com/wealdtech/probec/services/blocks/events"
+	mocksubmitter "github.com/wealdtech/probec/services/submitter/mock"
 )
 
 func TestService(t *testing.T) {
@@ -38,6 +39,8 @@ func TestService(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	submitter := mocksubmitter.New()
+
 	tests := []struct {
 		name   string
 		params []events.Parameter
@@ -52,6 +55,7 @@ func TestService(t *testing.T) {
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
 					"test": mockClient,
 				}),
+				events.WithSubmitter(submitter),
 			},
 			err: "problem with parameters: monitor not supplied",
 		},
@@ -62,6 +66,7 @@ func TestService(t *testing.T) {
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
 					"test": mockClient,
 				}),
+				events.WithSubmitter(submitter),
 			},
 			err: "problem with parameters: chain time service not supplied",
 		},
@@ -71,8 +76,20 @@ func TestService(t *testing.T) {
 				events.WithLogLevel(zerolog.Disabled),
 				events.WithChainTime(chainTime),
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{}),
+				events.WithSubmitter(submitter),
 			},
 			err: "problem with parameters: events providers not supplied",
+		},
+		{
+			name: "SubmitterMissing",
+			params: []events.Parameter{
+				events.WithLogLevel(zerolog.Disabled),
+				events.WithChainTime(chainTime),
+				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
+					"test": mockClient,
+				}),
+			},
+			err: "problem with parameters: submitter not supplied",
 		},
 		{
 			name: "Good",
@@ -82,6 +99,7 @@ func TestService(t *testing.T) {
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
 					"test": mockClient,
 				}),
+				events.WithSubmitter(submitter),
 			},
 		},
 	}

@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	standardchaintime "github.com/wealdtech/chaind/services/chaintime/standard"
+	eventsattestations "github.com/wealdtech/probec/services/attestations/events"
 	eventsblocks "github.com/wealdtech/probec/services/blocks/events"
 	eventsheads "github.com/wealdtech/probec/services/heads/events"
 	"github.com/wealdtech/probec/services/metrics"
@@ -41,7 +42,7 @@ import (
 )
 
 // ReleaseVersion is the release version for the code.
-var ReleaseVersion = "0.2.3"
+var ReleaseVersion = "0.3.0"
 
 func main() {
 	os.Exit(main2())
@@ -112,6 +113,7 @@ func fetchConfig() error {
 	pflag.String("log-file", "", "redirect log output to a file")
 	pflag.Bool("blocks.enable", true, "enable logging of block delays")
 	pflag.Bool("heads.enable", true, "enable logging of head delays")
+	pflag.Bool("attestations.enable", true, "enable logging of attestations and their delays")
 	pflag.Parse()
 	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
 		return errors.Wrap(err, "failed to bind pflags to viper")
@@ -233,6 +235,19 @@ func startServices(ctx context.Context, monitor metrics.Service) error {
 			eventsheads.WithChainTime(chainTime),
 			eventsheads.WithEventsProviders(providers),
 			eventsheads.WithSubmitter(submitter),
+		); err != nil {
+			return err
+		}
+	}
+
+	if viper.GetBool("attestations.enable") {
+		log.Trace().Msg("Starting attestations service")
+		if _, err := eventsattestations.New(ctx,
+			eventsattestations.WithLogLevel(util.LogLevel("attestations.events")),
+			eventsattestations.WithMonitor(monitor),
+			eventsattestations.WithChainTime(chainTime),
+			eventsattestations.WithEventsProviders(providers),
+			eventsattestations.WithSubmitter(submitter),
 		); err != nil {
 			return err
 		}

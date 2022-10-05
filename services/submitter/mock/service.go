@@ -36,3 +36,13 @@ func (s *service) SubmitBlockDelay(ctx context.Context, body string) error {
 func (s *service) SubmitHeadDelay(ctx context.Context, body string) error {
 	return nil
 }
+
+// SubmitAggregateAttestation submits an aggregate attestation data point.
+func (s *service) SubmitAggregateAttestation(ctx context.Context, body string) error {
+	return nil
+}
+
+// SubmitAttestationSummary submits a summary of attestation data points.
+func (s *service) SubmitAttestationSummary(ctx context.Context, body string) error {
+	return nil
+}

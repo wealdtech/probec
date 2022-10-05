@@ -24,4 +24,10 @@ type Service interface {
 
 	// SubmitHeadDelay submits a head delay data point.
 	SubmitHeadDelay(ctx context.Context, body string) error
+
+	// SubmitAggregateAttestation submits an aggregate attestation data point.
+	SubmitAggregateAttestation(ctx context.Context, body string) error
+
+	// SubmitAttestationSummary submits a summary of attestation data points.
+	SubmitAttestationSummary(ctx context.Context, body string) error
 }

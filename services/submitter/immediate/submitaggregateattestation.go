@@ -44,9 +44,11 @@ func (s *Service) submitAggregateAttestation(ctx context.Context, body string, b
 		s.log.Error().Err(err).Msg("Failed to send aggregate attestation request")
 	}
 
-	if err := resp.Body.Close(); err != nil {
-		monitorSubmission("aggregate attestation", false, time.Since(started))
-		return
+	if resp != nil && resp.Body != nil {
+		if err := resp.Body.Close(); err != nil {
+			monitorSubmission("aggregate attestation", false, time.Since(started))
+			return
+		}
 	}
 
 	monitorSubmission("aggregate attestation", true, time.Since(started))

@@ -44,9 +44,11 @@ func (s *Service) submitAttestationSummary(ctx context.Context, body string, bas
 		s.log.Error().Err(err).Msg("Failed to send attestation summary request")
 	}
 
-	if err := resp.Body.Close(); err != nil {
-		monitorSubmission("attestation summary", false, time.Since(started))
-		return
+	if resp != nil && resp.Body != nil {
+		if err := resp.Body.Close(); err != nil {
+			monitorSubmission("attestation summary", false, time.Since(started))
+			return
+		}
 	}
 
 	monitorSubmission("attestation summary", true, time.Since(started))

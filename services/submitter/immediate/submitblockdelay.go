@@ -44,9 +44,11 @@ func (s *Service) submitBlockDelay(ctx context.Context, body string, baseURL str
 		s.log.Error().Err(err).Msg("Failed to send block delay request")
 	}
 
-	if err := resp.Body.Close(); err != nil {
-		monitorSubmission("block delay", false, time.Since(started))
-		return
+	if resp != nil && resp.Body != nil {
+		if err := resp.Body.Close(); err != nil {
+			monitorSubmission("block delay", false, time.Since(started))
+			return
+		}
 	}
 
 	monitorSubmission("block delay", true, time.Since(started))

@@ -44,9 +44,11 @@ func (s *Service) submitHeadDelay(ctx context.Context, body string, baseURL stri
 		s.log.Error().Err(err).Msg("Failed to send head delay request")
 	}
 
-	if err := resp.Body.Close(); err != nil {
-		monitorSubmission("head delay", false, time.Since(started))
-		return
+	if resp != nil && resp.Body != nil {
+		if err := resp.Body.Close(); err != nil {
+			monitorSubmission("head delay", false, time.Since(started))
+			return
+		}
 	}
 
 	monitorSubmission("head delay", true, time.Since(started))

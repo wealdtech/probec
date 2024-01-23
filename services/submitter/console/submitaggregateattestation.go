@@ -20,7 +20,7 @@ import (
 )
 
 // SubmitAggregateAttestation submits an aggregate attestation data point.
-func (s *Service) SubmitAggregateAttestation(ctx context.Context, body string) {
+func (*Service) SubmitAggregateAttestation(_ context.Context, body string) {
 	fmt.Fprintf(os.Stdout, "%s\n", body)
 
 	monitorSubmission("aggregate attestation")

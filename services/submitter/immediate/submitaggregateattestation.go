@@ -1,4 +1,4 @@
-// Copyright © 2022 Weald Technology Trading.
+// Copyright © 2022, 2024 Weald Technology Trading.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,20 +23,27 @@ import (
 
 // SubmitAggregateAttestation submits an aggregate attestation data point.
 func (s *Service) SubmitAggregateAttestation(ctx context.Context, body string) {
-	for _, baseUrl := range s.baseUrls {
-		go s.submitAggregateAttestation(ctx, body, baseUrl)
+	for _, baseURL := range s.baseURLs {
+		go s.submitAggregateAttestation(ctx, body, baseURL)
 	}
 }
 
-func (s *Service) submitAggregateAttestation(ctx context.Context, body string, baseUrl string) {
+func (s *Service) submitAggregateAttestation(ctx context.Context, body string, baseURL string) {
 	started := time.Now()
 
-	resp, err := http.Post(fmt.Sprintf("%s/v1/aggregateattestation", baseUrl), "application/json", strings.NewReader(body))
+	url := fmt.Sprintf("%s/v1/aggregateattestation", baseURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
 	if err != nil {
-		monitorSubmission("aggreate attestation", false, time.Since(started))
-		s.log.Warn().Err(err).Msg("Failed to post aggregate attestation")
-		return
+		monitorSubmission("aggregate attestation", false, time.Since(started))
+		s.log.Error().Err(err).Msg("Failed to create aggregate attestation request")
 	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		monitorSubmission("aggregate attestation", false, time.Since(started))
+		s.log.Error().Err(err).Msg("Failed to send aggregate attestation request")
+	}
+
 	if err := resp.Body.Close(); err != nil {
 		monitorSubmission("aggregate attestation", false, time.Since(started))
 		return

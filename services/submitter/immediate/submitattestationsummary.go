@@ -1,4 +1,4 @@
-// Copyright © 2022 Weald Technology Trading.
+// Copyright © 2022, 2024 Weald Technology Trading.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,20 +23,27 @@ import (
 
 // SubmitAttestationSummary submits a summary of attestation data points.
 func (s *Service) SubmitAttestationSummary(ctx context.Context, body string) {
-	for _, baseUrl := range s.baseUrls {
-		go s.submitAttestationSummary(ctx, body, baseUrl)
+	for _, baseURL := range s.baseURLs {
+		go s.submitAttestationSummary(ctx, body, baseURL)
 	}
 }
 
-func (s *Service) submitAttestationSummary(ctx context.Context, body string, baseUrl string) {
+func (s *Service) submitAttestationSummary(ctx context.Context, body string, baseURL string) {
 	started := time.Now()
 
-	resp, err := http.Post(fmt.Sprintf("%s/v1/attestationsummary", baseUrl), "application/json", strings.NewReader(body))
+	url := fmt.Sprintf("%s/v1/attestationsummary", baseURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
 	if err != nil {
 		monitorSubmission("attestation summary", false, time.Since(started))
-		s.log.Warn().Err(err).Msg("Failed to post attestation summary")
-		return
+		s.log.Error().Err(err).Msg("Failed to create attestation summary request")
 	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		monitorSubmission("attestation summary", false, time.Since(started))
+		s.log.Error().Err(err).Msg("Failed to send attestation summary request")
+	}
+
 	if err := resp.Body.Close(); err != nil {
 		monitorSubmission("attestation summary", false, time.Since(started))
 		return

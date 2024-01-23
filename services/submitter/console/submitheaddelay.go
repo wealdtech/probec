@@ -20,7 +20,7 @@ import (
 )
 
 // SubmitHeadDelay submits a head delay data point.
-func (s *Service) SubmitHeadDelay(ctx context.Context, body string) {
+func (*Service) SubmitHeadDelay(_ context.Context, body string) {
 	fmt.Fprintf(os.Stdout, "%s\n", body)
 
 	monitorSubmission("head delay")

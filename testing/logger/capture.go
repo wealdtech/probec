@@ -55,6 +55,8 @@ func NewLogCapture() *LogCapture {
 
 // AssertHasEntry checks if there is a log entry with the given string.
 func (c *LogCapture) AssertHasEntry(t *testing.T, msg string) {
+	t.Helper()
+
 	assert.True(t, c.HasLog(map[string]interface{}{
 		"message": msg,
 	}))
@@ -82,7 +84,8 @@ func (c *LogCapture) HasLog(fields map[string]interface{}) bool {
 }
 
 // hasField returns true if the entry has a matching field.
-// nolint:gocyclo
+//
+//nolint:gocyclo
 func (c *LogCapture) hasField(entry map[string]interface{}, key string, value interface{}) bool {
 	for entryKey, entryValue := range entry {
 		if entryKey != key {

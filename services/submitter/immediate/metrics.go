@@ -21,8 +21,10 @@ import (
 	"github.com/wealdtech/probec/services/metrics"
 )
 
-var submitterCounter *prometheus.CounterVec
-var submitterTimer *prometheus.HistogramVec
+var (
+	submitterCounter *prometheus.CounterVec
+	submitterTimer   *prometheus.HistogramVec
+)
 
 func registerMetrics(ctx context.Context, monitor metrics.Service) error {
 	if submitterCounter != nil {

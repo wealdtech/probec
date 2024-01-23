@@ -98,13 +98,9 @@ func (s *Service) monitorEvents(ctx context.Context,
 		// We treat attestations differently depending on if they are individual or aggregate.
 		validators := data.AggregationBits.Count()
 		if validators == 1 {
-			if err := s.handleAttestation(ctx, name, data, delay); err != nil {
-				log.Error().Err(err).Msg("Failed to handle attestation")
-			}
+			s.handleAttestation(ctx, name, data, delay)
 		} else {
-			if err := s.handleAggregateAttestation(ctx, name, data, delay); err != nil {
-				log.Error().Err(err).Msg("Failed to handle aggregate attestation")
-			}
+			s.handleAggregateAttestation(ctx, name, data, delay)
 		}
 	}); err != nil {
 		return errors.Wrap(err, "failed to create events provider")
@@ -117,11 +113,11 @@ func (s *Service) handleAttestation(ctx context.Context,
 	name string,
 	attestation *phase0.Attestation,
 	delay time.Duration,
-) error {
+) {
 	bucket := delay.Milliseconds() % 100
 	if bucket < 0 || bucket > 119 {
 		log.Debug().Int64("bucket", bucket).Msg("Bucket out of range; ignoring")
-		return nil
+		return
 	}
 
 	key := fmt.Sprintf("%d:%x:%x:%x", attestation.Data.Index, attestation.Data.BeaconBlockRoot, attestation.Data.Source.Root, attestation.Data.Target.Root)
@@ -155,14 +151,14 @@ func (s *Service) handleAttestation(ctx context.Context,
 		if err != nil {
 			s.attestationsMu.Unlock()
 			log.Error().Err(err).Msg("Failed to aggregate attestations")
-			return nil
+			return
 		}
 	}
 
 	lastSlotSummaries, exists := s.attestationSummaries[attestation.Data.Slot-1]
 	if !exists {
 		s.attestationsMu.Unlock()
-		return nil
+		return
 	}
 
 	delete(s.attestationSummaries, attestation.Data.Slot-1)
@@ -205,15 +201,13 @@ func (s *Service) handleAttestation(ctx context.Context,
 	log.Trace().RawJSON("data", []byte(builder.String())).Msg("Attestation summary")
 
 	s.submitter.SubmitAttestationSummary(ctx, builder.String())
-
-	return nil
 }
 
 func (s *Service) handleAggregateAttestation(ctx context.Context,
 	name string,
 	attestation *phase0.Attestation,
 	delay time.Duration,
-) error {
+) {
 	// Build and send the data.
 	body := fmt.Sprintf(`{"source":"%s","method":"attestation event","slot":"%d","committee_index":"%d","beacon_block_root":"%#x","source_root":"%#x","target_root":"%#x","aggregation_bits":"%#x","delay_ms":"%d"}`,
 		name,
@@ -227,6 +221,4 @@ func (s *Service) handleAggregateAttestation(ctx context.Context,
 	)
 	log.Trace().RawJSON("data", []byte(body)).Msg("Aggregate attestation")
 	s.submitter.SubmitAggregateAttestation(ctx, body)
-
-	return nil
 }

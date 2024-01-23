@@ -20,7 +20,7 @@ import (
 )
 
 // SubmitAttestationSummary submits a summary of attestation data points.
-func (s *Service) SubmitAttestationSummary(ctx context.Context, body string) {
+func (*Service) SubmitAttestationSummary(_ context.Context, body string) {
 	fmt.Fprintf(os.Stdout, "%s\n", body)
 
 	monitorSubmission("attestation summary")

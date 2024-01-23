@@ -24,7 +24,7 @@ import (
 type parameters struct {
 	logLevel zerolog.Level
 	monitor  metrics.Service
-	baseUrls []string
+	baseURLs []string
 }
 
 // Parameter is the interface for service parameters.
@@ -52,10 +52,10 @@ func WithMonitor(monitor metrics.Service) Parameter {
 	})
 }
 
-// WithBaseUrls sets the base URLs for this module.
-func WithBaseUrls(baseUrls []string) Parameter {
+// WithBaseURLs sets the base URLs for this module.
+func WithBaseURLs(baseUrls []string) Parameter {
 	return parameterFunc(func(p *parameters) {
-		p.baseUrls = baseUrls
+		p.baseURLs = baseUrls
 	})
 }
 
@@ -74,7 +74,7 @@ func parseAndCheckParameters(params ...Parameter) (*parameters, error) {
 	if parameters.monitor == nil {
 		return nil, errors.New("monitor not supplied")
 	}
-	if len(parameters.baseUrls) == 0 {
+	if len(parameters.baseURLs) == 0 {
 		return nil, errors.New("base URL not supplied")
 	}
 

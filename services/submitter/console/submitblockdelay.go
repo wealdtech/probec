@@ -20,7 +20,7 @@ import (
 )
 
 // SubmitBlockDelay submits a block delay data point.
-func (s *Service) SubmitBlockDelay(ctx context.Context, body string) {
+func (*Service) SubmitBlockDelay(_ context.Context, body string) {
 	fmt.Fprintf(os.Stdout, "%s\n", body)
 
 	monitorSubmission("block delay")

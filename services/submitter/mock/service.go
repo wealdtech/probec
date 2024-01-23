@@ -28,13 +28,13 @@ func New() submitter.Service {
 }
 
 // SubmitBlockDelay submits a block delay data point.
-func (s *service) SubmitBlockDelay(ctx context.Context, body string) {}
+func (*service) SubmitBlockDelay(_ context.Context, _ string) {}
 
 // SubmitHeadDelay submits a head delay data point.
-func (s *service) SubmitHeadDelay(ctx context.Context, body string) {}
+func (*service) SubmitHeadDelay(_ context.Context, _ string) {}
 
 // SubmitAggregateAttestation submits an aggregate attestation data point.
-func (s *service) SubmitAggregateAttestation(ctx context.Context, body string) {}
+func (*service) SubmitAggregateAttestation(_ context.Context, _ string) {}
 
 // SubmitAttestationSummary submits a summary of attestation data points.
-func (s *service) SubmitAttestationSummary(ctx context.Context, body string) {}
+func (*service) SubmitAttestationSummary(_ context.Context, _ string) {}

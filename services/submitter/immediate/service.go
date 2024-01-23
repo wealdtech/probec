@@ -26,7 +26,7 @@ import (
 // Service is a fee recipient provider service.
 type Service struct {
 	log      zerolog.Logger
-	baseUrls []string
+	baseURLs []string
 }
 
 // New creates a new fee recipient provider service.
@@ -46,18 +46,18 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		return nil, errors.New("failed to register metrics")
 	}
 
-	baseUrls := make([]string, len(parameters.baseUrls))
-	for i := range parameters.baseUrls {
-		baseUrl, err := url.Parse(parameters.baseUrls[i])
+	baseURLs := make([]string, len(parameters.baseURLs))
+	for i := range parameters.baseURLs {
+		baseURL, err := url.Parse(parameters.baseURLs[i])
 		if err != nil {
-			return nil, errors.Wrapf(err, "invalid base URL %s", parameters.baseUrls[i])
+			return nil, errors.Wrapf(err, "invalid base URL %s", parameters.baseURLs[i])
 		}
-		baseUrls[i] = strings.TrimSuffix(baseUrl.String(), "/")
+		baseURLs[i] = strings.TrimSuffix(baseURL.String(), "/")
 	}
 
 	s := &Service{
 		log:      log,
-		baseUrls: baseUrls,
+		baseURLs: baseURLs,
 	}
 
 	return s, nil

@@ -23,8 +23,10 @@ import (
 	"github.com/wealdtech/probec/util"
 )
 
-var clients map[string]eth2client.Service
-var clientsMu sync.RWMutex
+var (
+	clients   map[string]eth2client.Service
+	clientsMu sync.RWMutex
+)
 
 // fetchClient fetches a client service, instantiating it if required.
 func fetchClient(ctx context.Context, address string) (eth2client.Service, error) {

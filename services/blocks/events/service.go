@@ -19,11 +19,12 @@ import (
 	"time"
 
 	consensusclient "github.com/attestantio/go-eth2-client"
+	"github.com/attestantio/go-eth2-client/api"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	zerologger "github.com/rs/zerolog/log"
-	"github.com/wealdtech/chaind/services/chaintime"
+	"github.com/wealdtech/probec/services/chaintime"
 	"github.com/wealdtech/probec/services/submitter"
 )
 
@@ -61,7 +62,6 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 	for name, eventsProvider := range parameters.eventsProviders {
 		if err := s.monitorEvents(ctx, name, eventsProvider); err != nil {
 			return nil, err
-
 		}
 	}
 	return s, nil
@@ -76,12 +76,12 @@ func (s *Service) monitorEvents(ctx context.Context,
 		delay := time.Since(s.chainTime.StartOfSlot(data.Slot))
 
 		// Ensure the node is synced.
-		syncing, err := eventsProvider.(consensusclient.NodeSyncingProvider).NodeSyncing(ctx)
+		syncingResponse, err := eventsProvider.(consensusclient.NodeSyncingProvider).NodeSyncing(ctx, &api.NodeSyncingOpts{})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to ascertain if node is syncing")
 			return
 		}
-		if syncing.IsSyncing {
+		if syncingResponse.Data.IsSyncing {
 			log.Debug().Msg("Node is syncing, not sending information")
 		}
 
@@ -89,10 +89,7 @@ func (s *Service) monitorEvents(ctx context.Context,
 
 		// Build and send the data.
 		body := fmt.Sprintf(`{"source":"%s","method":"block event","slot":"%d","delay_ms":"%d"}`, name, data.Slot, int(delay.Milliseconds()))
-		if err := s.submitter.SubmitBlockDelay(ctx, body); err != nil {
-			log.Error().Err(err).Msg("Failed to submit block delay")
-			return
-		}
+		s.submitter.SubmitBlockDelay(ctx, body)
 	}); err != nil {
 		return errors.Wrap(err, "failed to create events provider")
 	}

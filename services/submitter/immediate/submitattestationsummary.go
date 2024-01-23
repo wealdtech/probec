@@ -19,24 +19,28 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // SubmitAttestationSummary submits a summary of attestation data points.
-func (s *Service) SubmitAttestationSummary(ctx context.Context, body string) error {
+func (s *Service) SubmitAttestationSummary(ctx context.Context, body string) {
+	for _, baseUrl := range s.baseUrls {
+		go s.submitAttestationSummary(ctx, body, baseUrl)
+	}
+}
+
+func (s *Service) submitAttestationSummary(ctx context.Context, body string, baseUrl string) {
 	started := time.Now()
 
-	resp, err := http.Post(fmt.Sprintf("%s/v1/attestationsummary", s.baseUrl), "application/json", strings.NewReader(body))
+	resp, err := http.Post(fmt.Sprintf("%s/v1/attestationsummary", baseUrl), "application/json", strings.NewReader(body))
 	if err != nil {
 		monitorSubmission("attestation summary", false, time.Since(started))
-		return errors.Wrap(err, "failed to post attestation summary")
+		s.log.Warn().Err(err).Msg("Failed to post attestation summary")
+		return
 	}
 	if err := resp.Body.Close(); err != nil {
 		monitorSubmission("attestation summary", false, time.Since(started))
-		return errors.Wrap(err, "failed to close attestation summary response")
+		return
 	}
 
 	monitorSubmission("attestation summary", true, time.Since(started))
-	return nil
 }

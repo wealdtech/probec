@@ -21,8 +21,8 @@ import (
 	"github.com/attestantio/go-eth2-client/mock"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
-	standardchaintime "github.com/wealdtech/chaind/services/chaintime/standard"
 	"github.com/wealdtech/probec/services/blocks/events"
+	standardchaintime "github.com/wealdtech/probec/services/chaintime/standard"
 	mocksubmitter "github.com/wealdtech/probec/services/submitter/mock"
 )
 
@@ -33,7 +33,7 @@ func TestService(t *testing.T) {
 	require.NoError(t, err)
 
 	chainTime, err := standardchaintime.New(ctx,
-		standardchaintime.WithGenesisTimeProvider(mockClient),
+		standardchaintime.WithGenesisProvider(mockClient),
 		standardchaintime.WithSpecProvider(mockClient),
 		standardchaintime.WithForkScheduleProvider(mockClient),
 	)

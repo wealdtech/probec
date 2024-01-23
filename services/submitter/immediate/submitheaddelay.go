@@ -19,24 +19,28 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // SubmitHeadDelay submits a head delay data point.
-func (s *Service) SubmitHeadDelay(ctx context.Context, body string) error {
+func (s *Service) SubmitHeadDelay(ctx context.Context, body string) {
+	for _, baseUrl := range s.baseUrls {
+		go s.submitHeadDelay(ctx, body, baseUrl)
+	}
+}
+
+func (s *Service) submitHeadDelay(ctx context.Context, body string, baseUrl string) {
 	started := time.Now()
 
-	resp, err := http.Post(fmt.Sprintf("%s/v1/headdelay", s.baseUrl), "application/json", strings.NewReader(body))
+	resp, err := http.Post(fmt.Sprintf("%s/v1/headdelay", baseUrl), "application/json", strings.NewReader(body))
 	if err != nil {
 		monitorSubmission("head delay", false, time.Since(started))
-		return errors.Wrap(err, "failed to post head delay")
+		s.log.Warn().Err(err).Msg("Failed to post head delay")
+		return
 	}
 	if err := resp.Body.Close(); err != nil {
 		monitorSubmission("head delay", false, time.Since(started))
-		return errors.Wrap(err, "failed to close head delay response")
+		return
 	}
 
 	monitorSubmission("head delay", true, time.Since(started))
-	return nil
 }

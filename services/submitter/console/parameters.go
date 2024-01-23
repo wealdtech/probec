@@ -1,4 +1,4 @@
-// Copyright © 2022, 2023 Weald Technology Trading.
+// Copyright © 2023 Weald Technology Trading.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package immediate
+package console
 
 import (
 	"errors"
@@ -24,7 +24,6 @@ import (
 type parameters struct {
 	logLevel zerolog.Level
 	monitor  metrics.Service
-	baseUrls []string
 }
 
 // Parameter is the interface for service parameters.
@@ -52,13 +51,6 @@ func WithMonitor(monitor metrics.Service) Parameter {
 	})
 }
 
-// WithBaseUrls sets the base URLs for this module.
-func WithBaseUrls(baseUrls []string) Parameter {
-	return parameterFunc(func(p *parameters) {
-		p.baseUrls = baseUrls
-	})
-}
-
 // parseAndCheckParameters parses and checks parameters to ensure that mandatory parameters are present and correct.
 func parseAndCheckParameters(params ...Parameter) (*parameters, error) {
 	parameters := parameters{
@@ -73,9 +65,6 @@ func parseAndCheckParameters(params ...Parameter) (*parameters, error) {
 
 	if parameters.monitor == nil {
 		return nil, errors.New("monitor not supplied")
-	}
-	if len(parameters.baseUrls) == 0 {
-		return nil, errors.New("base URL not supplied")
 	}
 
 	return &parameters, nil

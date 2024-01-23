@@ -25,24 +25,27 @@ import (
 	"time"
 
 	consensusclient "github.com/attestantio/go-eth2-client"
+	"github.com/attestantio/go-eth2-client/api"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	zerologger "github.com/rs/zerolog/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	standardchaintime "github.com/wealdtech/chaind/services/chaintime/standard"
 	eventsattestations "github.com/wealdtech/probec/services/attestations/events"
 	eventsblocks "github.com/wealdtech/probec/services/blocks/events"
+	standardchaintime "github.com/wealdtech/probec/services/chaintime/standard"
 	eventsheads "github.com/wealdtech/probec/services/heads/events"
 	"github.com/wealdtech/probec/services/metrics"
 	nullmetrics "github.com/wealdtech/probec/services/metrics/null"
 	prometheusmetrics "github.com/wealdtech/probec/services/metrics/prometheus"
+	"github.com/wealdtech/probec/services/submitter"
+	consolesubmitter "github.com/wealdtech/probec/services/submitter/console"
 	immediatesubmitter "github.com/wealdtech/probec/services/submitter/immediate"
 	"github.com/wealdtech/probec/util"
 )
 
 // ReleaseVersion is the release version for the code.
-var ReleaseVersion = "0.3.0"
+var ReleaseVersion = "0.4.0"
 
 func main() {
 	os.Exit(main2())
@@ -66,7 +69,7 @@ func main2() int {
 	runCommands(ctx)
 
 	logModules()
-	log.Info().Str("version", ReleaseVersion).Msg("Starting probec")
+	log.Info().Str("version", ReleaseVersion).Str("commit_hash", util.CommitHash()).Msg("Starting probec")
 
 	runtime.GOMAXPROCS(runtime.NumCPU() * 8)
 
@@ -113,7 +116,7 @@ func fetchConfig() error {
 	pflag.String("log-file", "", "redirect log output to a file")
 	pflag.Bool("blocks.enable", true, "enable logging of block delays")
 	pflag.Bool("heads.enable", true, "enable logging of head delays")
-	pflag.Bool("attestations.enable", true, "enable logging of attestations and their delays")
+	pflag.Bool("attestations.enable", false, "enable logging of attestations and their delays")
 	pflag.Parse()
 	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
 		return errors.Wrap(err, "failed to bind pflags to viper")
@@ -140,6 +143,7 @@ func fetchConfig() error {
 
 	// Defaults.
 	viper.SetDefault("consensusclient.timeout", 2*time.Minute)
+	viper.SetDefault("submitter.style", "immediate")
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -170,11 +174,31 @@ func startMonitor(ctx context.Context) (metrics.Service, error) {
 }
 
 func startServices(ctx context.Context, monitor metrics.Service) error {
-	submitter, err := immediatesubmitter.New(ctx,
-		immediatesubmitter.WithLogLevel(util.LogLevel("submitter.immediate")),
-		immediatesubmitter.WithMonitor(monitor),
-		immediatesubmitter.WithBaseUrl(viper.GetString("submitter.base-url")),
-	)
+	var submitter submitter.Service
+	var err error
+	switch viper.GetString("submitter.style") {
+	case "immediate":
+		baseUrls := viper.GetStringSlice("submitter.base-urls")
+		if len(baseUrls) == 0 {
+			if viper.GetString("submitter.base-url") == "" {
+				return errors.New("no submitter base URL supplied")
+			}
+			baseUrls = []string{viper.GetString("submitter.base-url")}
+		}
+
+		submitter, err = immediatesubmitter.New(ctx,
+			immediatesubmitter.WithLogLevel(util.LogLevel("submitter.immediate")),
+			immediatesubmitter.WithMonitor(monitor),
+			immediatesubmitter.WithBaseUrls(baseUrls),
+		)
+	case "console":
+		submitter, err = consolesubmitter.New(ctx,
+			consolesubmitter.WithLogLevel(util.LogLevel("submitter.console")),
+			consolesubmitter.WithMonitor(monitor),
+		)
+	default:
+		return fmt.Errorf("unknown submitter %s", viper.GetString("submitter.style"))
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to start submitter")
 	}
@@ -195,18 +219,18 @@ func startServices(ctx context.Context, monitor metrics.Service) error {
 		if !isProvider {
 			return fmt.Errorf("%s does not provide events", address)
 		}
-		nodeVersion, err := client.(consensusclient.NodeVersionProvider).NodeVersion(ctx)
+		nodeVersionResponse, err := client.(consensusclient.NodeVersionProvider).NodeVersion(ctx, &api.NodeVersionOpts{})
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch node version")
 		}
-		providers[nodeVersion] = eventsProvider
+		providers[nodeVersionResponse.Data] = eventsProvider
 		if firstClient == nil {
 			firstClient = client
 		}
 	}
 
 	chainTime, err := standardchaintime.New(ctx,
-		standardchaintime.WithGenesisTimeProvider(firstClient.(consensusclient.GenesisTimeProvider)),
+		standardchaintime.WithGenesisProvider(firstClient.(consensusclient.GenesisProvider)),
 		standardchaintime.WithSpecProvider(firstClient.(consensusclient.SpecProvider)),
 		standardchaintime.WithForkScheduleProvider(firstClient.(consensusclient.ForkScheduleProvider)),
 	)
@@ -261,13 +285,11 @@ func logModules() {
 	if ok {
 		log.Trace().Str("path", buildInfo.Path).Msg("Main package")
 		for _, dep := range buildInfo.Deps {
-			log := log.Trace()
-			if dep.Replace == nil {
-				log = log.Str("path", dep.Path).Str("version", dep.Version)
-			} else {
-				log = log.Str("path", dep.Replace.Path).Str("version", dep.Replace.Version)
+			path := dep.Path
+			if dep.Replace != nil {
+				path = dep.Replace.Path
 			}
-			log.Msg("Dependency")
+			log.Trace().Str("path", path).Str("version", dep.Version).Msg("Dependency")
 		}
 	}
 }

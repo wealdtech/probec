@@ -19,24 +19,28 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // SubmitBlockDelay submits a block delay data point.
-func (s *Service) SubmitBlockDelay(ctx context.Context, body string) error {
+func (s *Service) SubmitBlockDelay(ctx context.Context, body string) {
+	for _, baseUrl := range s.baseUrls {
+		go s.submitBlockDelay(ctx, body, baseUrl)
+	}
+}
+
+func (s *Service) submitBlockDelay(ctx context.Context, body string, baseUrl string) {
 	started := time.Now()
 
-	resp, err := http.Post(fmt.Sprintf("%s/v1/blockdelay", s.baseUrl), "application/json", strings.NewReader(body))
+	resp, err := http.Post(fmt.Sprintf("%s/v1/blockdelay", baseUrl), "application/json", strings.NewReader(body))
 	if err != nil {
 		monitorSubmission("block delay", false, time.Since(started))
-		return errors.Wrap(err, "failed to post block delay")
+		s.log.Warn().Err(err).Msg("Failed to post block delay")
+		return
 	}
 	if err := resp.Body.Close(); err != nil {
 		monitorSubmission("block delay", false, time.Since(started))
-		return errors.Wrap(err, "failed to close block delay response")
+		return
 	}
 
 	monitorSubmission("block delay", true, time.Since(started))
-	return nil
 }

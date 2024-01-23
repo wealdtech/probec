@@ -18,7 +18,7 @@ import (
 
 	consensusclient "github.com/attestantio/go-eth2-client"
 	"github.com/rs/zerolog"
-	"github.com/wealdtech/chaind/services/chaintime"
+	"github.com/wealdtech/probec/services/chaintime"
 	"github.com/wealdtech/probec/services/metrics"
 	nullmetrics "github.com/wealdtech/probec/services/metrics/null"
 	"github.com/wealdtech/probec/services/submitter"

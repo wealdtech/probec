@@ -27,7 +27,7 @@ import (
 	bitfield "github.com/prysmaticlabs/go-bitfield"
 	"github.com/rs/zerolog"
 	zerologger "github.com/rs/zerolog/log"
-	"github.com/wealdtech/chaind/services/chaintime"
+	"github.com/wealdtech/probec/services/chaintime"
 	"github.com/wealdtech/probec/services/submitter"
 )
 
@@ -51,7 +51,7 @@ type Service struct {
 // module-wide log.
 var log zerolog.Logger
 
-// New creates a new fee recipient provider service.
+// New creates a new attestation service.
 func New(ctx context.Context, params ...Parameter) (*Service, error) {
 	parameters, err := parseAndCheckParameters(params...)
 	if err != nil {
@@ -77,7 +77,6 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 	for name, eventsProvider := range parameters.eventsProviders {
 		if err := s.monitorEvents(ctx, name, eventsProvider); err != nil {
 			return nil, err
-
 		}
 	}
 	return s, nil
@@ -91,7 +90,7 @@ func (s *Service) monitorEvents(ctx context.Context,
 		data := event.Data.(*phase0.Attestation)
 		delay := time.Since(s.chainTime.StartOfSlot(data.Data.Slot))
 		if delay.Seconds() < 0 || delay.Seconds() > 12 {
-			log.Debug().Stringer("delay", delay).Msg("Delay out of range, ignoring")
+			log.Trace().Uint64("slot", uint64(data.Data.Slot)).Stringer("delay", delay).Msg("Delay out of range, ignoring")
 			return
 		}
 		monitorEventProcessed(delay)
@@ -205,9 +204,7 @@ func (s *Service) handleAttestation(ctx context.Context,
 	builder.WriteString("]}")
 	log.Trace().RawJSON("data", []byte(builder.String())).Msg("Attestation summary")
 
-	if err := s.submitter.SubmitAttestationSummary(ctx, builder.String()); err != nil {
-		return errors.Wrap(err, "failed to submit attestation summary")
-	}
+	s.submitter.SubmitAttestationSummary(ctx, builder.String())
 
 	return nil
 }
@@ -229,8 +226,7 @@ func (s *Service) handleAggregateAttestation(ctx context.Context,
 		int(delay.Milliseconds()),
 	)
 	log.Trace().RawJSON("data", []byte(body)).Msg("Aggregate attestation")
-	if err := s.submitter.SubmitAggregateAttestation(ctx, body); err != nil {
-		return errors.Wrap(err, "failed to submit aggregate attestation")
-	}
+	s.submitter.SubmitAggregateAttestation(ctx, body)
+
 	return nil
 }

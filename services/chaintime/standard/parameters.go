@@ -1,4 +1,4 @@
-// Copyright © 2022, 2023 Weald Technology Trading.
+// Copyright © 2023 Weald Technology Trading.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,20 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package immediate
+package standard
 
 import (
-	"errors"
-
+	eth2client "github.com/attestantio/go-eth2-client"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/wealdtech/probec/services/metrics"
-	nullmetrics "github.com/wealdtech/probec/services/metrics/null"
 )
 
 type parameters struct {
-	logLevel zerolog.Level
-	monitor  metrics.Service
-	baseUrls []string
+	logLevel             zerolog.Level
+	genesisProvider      eth2client.GenesisProvider
+	specProvider         eth2client.SpecProvider
+	forkScheduleProvider eth2client.ForkScheduleProvider
 }
 
 // Parameter is the interface for service parameters.
@@ -45,17 +44,24 @@ func WithLogLevel(logLevel zerolog.Level) Parameter {
 	})
 }
 
-// WithMonitor sets the monitor for the module.
-func WithMonitor(monitor metrics.Service) Parameter {
+// WithGenesisProvider sets the genesis time provider.
+func WithGenesisProvider(provider eth2client.GenesisProvider) Parameter {
 	return parameterFunc(func(p *parameters) {
-		p.monitor = monitor
+		p.genesisProvider = provider
 	})
 }
 
-// WithBaseUrls sets the base URLs for this module.
-func WithBaseUrls(baseUrls []string) Parameter {
+// WithSpecProvider sets the spec provider.
+func WithSpecProvider(provider eth2client.SpecProvider) Parameter {
 	return parameterFunc(func(p *parameters) {
-		p.baseUrls = baseUrls
+		p.specProvider = provider
+	})
+}
+
+// WithForkScheduleProvider sets the fork schedule provider.
+func WithForkScheduleProvider(provider eth2client.ForkScheduleProvider) Parameter {
+	return parameterFunc(func(p *parameters) {
+		p.forkScheduleProvider = provider
 	})
 }
 
@@ -63,7 +69,6 @@ func WithBaseUrls(baseUrls []string) Parameter {
 func parseAndCheckParameters(params ...Parameter) (*parameters, error) {
 	parameters := parameters{
 		logLevel: zerolog.GlobalLevel(),
-		monitor:  nullmetrics.New(),
 	}
 	for _, p := range params {
 		if params != nil {
@@ -71,11 +76,14 @@ func parseAndCheckParameters(params ...Parameter) (*parameters, error) {
 		}
 	}
 
-	if parameters.monitor == nil {
-		return nil, errors.New("monitor not supplied")
+	if parameters.specProvider == nil {
+		return nil, errors.New("no spec provider specified")
 	}
-	if len(parameters.baseUrls) == 0 {
-		return nil, errors.New("base URL not supplied")
+	if parameters.genesisProvider == nil {
+		return nil, errors.New("no genesis provider specified")
+	}
+	if parameters.forkScheduleProvider == nil {
+		return nil, errors.New("no fork schedule provider specified")
 	}
 
 	return &parameters, nil

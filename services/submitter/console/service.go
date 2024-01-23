@@ -1,4 +1,4 @@
-// Copyright © 2022 Weald Technology Trading.
+// Copyright © 2023 Weald Technology Trading.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,23 +11,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package immediate
+package console
 
 import (
 	"context"
-	"net/url"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	zerologger "github.com/rs/zerolog/log"
 )
 
-// Service is a fee recipient provider service.
-type Service struct {
-	log      zerolog.Logger
-	baseUrls []string
-}
+// Service is a submitter service that writes to the console.
+type Service struct{}
+
+// module-wide log.
+var log zerolog.Logger
 
 // New creates a new fee recipient provider service.
 func New(ctx context.Context, params ...Parameter) (*Service, error) {
@@ -37,7 +35,7 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 	}
 
 	// Set logging.
-	log := zerologger.With().Str("service", "submitter").Str("impl", "immediate").Logger()
+	log = zerologger.With().Str("service", "submitter").Str("impl", "console").Logger()
 	if parameters.logLevel != log.GetLevel() {
 		log = log.Level(parameters.logLevel)
 	}
@@ -46,19 +44,7 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		return nil, errors.New("failed to register metrics")
 	}
 
-	baseUrls := make([]string, len(parameters.baseUrls))
-	for i := range parameters.baseUrls {
-		baseUrl, err := url.Parse(parameters.baseUrls[i])
-		if err != nil {
-			return nil, errors.Wrapf(err, "invalid base URL %s", parameters.baseUrls[i])
-		}
-		baseUrls[i] = strings.TrimSuffix(baseUrl.String(), "/")
-	}
-
-	s := &Service{
-		log:      log,
-		baseUrls: baseUrls,
-	}
+	s := &Service{}
 
 	return s, nil
 }

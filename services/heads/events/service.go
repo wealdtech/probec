@@ -59,8 +59,8 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		submitter: parameters.submitter,
 	}
 
-	for name, eventsProvider := range parameters.eventsProviders {
-		if err := s.monitorEvents(ctx, name, eventsProvider); err != nil {
+	for address, eventsProvider := range parameters.eventsProviders {
+		if err := s.monitorEvents(ctx, eventsProvider, parameters.nodeVersionProviders[address]); err != nil {
 			return nil, err
 		}
 	}
@@ -68,8 +68,8 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 }
 
 func (s *Service) monitorEvents(ctx context.Context,
-	name string,
 	eventsProvider consensusclient.EventsProvider,
+	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
 	if err := eventsProvider.Events(ctx, []string{"head"}, func(event *apiv1.Event) {
 		data := event.Data.(*apiv1.HeadEvent)
@@ -87,8 +87,19 @@ func (s *Service) monitorEvents(ctx context.Context,
 
 		monitorEventProcessed(delay)
 
+		nodeVersionResponse, err := nodeVersionProvider.NodeVersion(ctx, &api.NodeVersionOpts{})
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to obtain node version")
+			return
+		}
+
 		// Build and send the data.
-		body := fmt.Sprintf(`{"source":"%s","method":"head event","slot":"%d","delay_ms":"%d"}`, name, data.Slot, int(delay.Milliseconds()))
+		body := fmt.Sprintf(
+			`{"source":"%s","method":"head event","slot":"%d","delay_ms":"%d"}`,
+			nodeVersionResponse.Data,
+			data.Slot,
+			int(delay.Milliseconds()),
+		)
 		s.submitter.SubmitHeadDelay(ctx, body)
 	}); err != nil {
 		return errors.Wrap(err, "failed to create events provider")

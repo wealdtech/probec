@@ -25,7 +25,6 @@ import (
 	"time"
 
 	consensusclient "github.com/attestantio/go-eth2-client"
-	"github.com/attestantio/go-eth2-client/api"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	zerologger "github.com/rs/zerolog/log"
@@ -45,7 +44,7 @@ import (
 )
 
 // ReleaseVersion is the release version for the code.
-var ReleaseVersion = "0.4.1"
+var ReleaseVersion = "0.5.0"
 
 func main() {
 	os.Exit(main2())
@@ -220,7 +219,8 @@ func startServices(ctx context.Context, monitor metrics.Service) error {
 	if len(addresses) == 0 {
 		return errors.New("no consensus client addresses provided")
 	}
-	providers := make(map[string]consensusclient.EventsProvider)
+	eventsProviders := make(map[string]consensusclient.EventsProvider)
+	nodeVersionProviders := make(map[string]consensusclient.NodeVersionProvider)
 	var firstClient consensusclient.Service
 	for _, address := range addresses {
 		client, err := fetchClient(ctx, address)
@@ -231,14 +231,15 @@ func startServices(ctx context.Context, monitor metrics.Service) error {
 		if !isProvider {
 			return fmt.Errorf("%s does not provide events", address)
 		}
-		nodeVersionResponse, err := client.(consensusclient.NodeVersionProvider).NodeVersion(ctx, &api.NodeVersionOpts{})
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch node version")
-		}
-		providers[nodeVersionResponse.Data] = eventsProvider
+		eventsProviders[address] = eventsProvider
 		if firstClient == nil {
 			firstClient = client
 		}
+		nodeVersionProvider, isProvider := client.(consensusclient.NodeVersionProvider)
+		if !isProvider {
+			return fmt.Errorf("%s does not provide node version", address)
+		}
+		nodeVersionProviders[address] = nodeVersionProvider
 	}
 
 	chainTime, err := standardchaintime.New(ctx,
@@ -256,7 +257,8 @@ func startServices(ctx context.Context, monitor metrics.Service) error {
 			eventsblocks.WithLogLevel(util.LogLevel("blocks.events")),
 			eventsblocks.WithMonitor(monitor),
 			eventsblocks.WithChainTime(chainTime),
-			eventsblocks.WithEventsProviders(providers),
+			eventsblocks.WithEventsProviders(eventsProviders),
+			eventsblocks.WithNodeVersionProviders(nodeVersionProviders),
 			eventsblocks.WithSubmitter(submitter),
 		); err != nil {
 			return err
@@ -269,7 +271,8 @@ func startServices(ctx context.Context, monitor metrics.Service) error {
 			eventsheads.WithLogLevel(util.LogLevel("heads.events")),
 			eventsheads.WithMonitor(monitor),
 			eventsheads.WithChainTime(chainTime),
-			eventsheads.WithEventsProviders(providers),
+			eventsheads.WithEventsProviders(eventsProviders),
+			eventsheads.WithNodeVersionProviders(nodeVersionProviders),
 			eventsheads.WithSubmitter(submitter),
 		); err != nil {
 			return err
@@ -282,7 +285,8 @@ func startServices(ctx context.Context, monitor metrics.Service) error {
 			eventsattestations.WithLogLevel(util.LogLevel("attestations.events")),
 			eventsattestations.WithMonitor(monitor),
 			eventsattestations.WithChainTime(chainTime),
-			eventsattestations.WithEventsProviders(providers),
+			eventsattestations.WithEventsProviders(eventsProviders),
+			eventsattestations.WithNodeVersionProviders(nodeVersionProviders),
 			eventsattestations.WithSubmitter(submitter),
 		); err != nil {
 			return err

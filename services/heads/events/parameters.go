@@ -1,4 +1,4 @@
-// Copyright © 2022 Weald Technology Trading.
+// Copyright © 2022, 2024 Weald Technology Trading.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -25,11 +25,12 @@ import (
 )
 
 type parameters struct {
-	logLevel        zerolog.Level
-	monitor         metrics.Service
-	chainTime       chaintime.Service
-	eventsProviders map[string]consensusclient.EventsProvider
-	submitter       submitter.Service
+	logLevel             zerolog.Level
+	monitor              metrics.Service
+	chainTime            chaintime.Service
+	eventsProviders      map[string]consensusclient.EventsProvider
+	nodeVersionProviders map[string]consensusclient.NodeVersionProvider
+	submitter            submitter.Service
 }
 
 // Parameter is the interface for service parameters.
@@ -71,6 +72,13 @@ func WithEventsProviders(providers map[string]consensusclient.EventsProvider) Pa
 	})
 }
 
+// WithNodeVersionProviders sets the node version providers for this module.
+func WithNodeVersionProviders(providers map[string]consensusclient.NodeVersionProvider) Parameter {
+	return parameterFunc(func(p *parameters) {
+		p.nodeVersionProviders = providers
+	})
+}
+
 // WithSubmitter sets the submitter for this module.
 func WithSubmitter(submitter submitter.Service) Parameter {
 	return parameterFunc(func(p *parameters) {
@@ -98,6 +106,9 @@ func parseAndCheckParameters(params ...Parameter) (*parameters, error) {
 	}
 	if len(parameters.eventsProviders) == 0 {
 		return nil, errors.New("events providers not supplied")
+	}
+	if len(parameters.nodeVersionProviders) == 0 {
+		return nil, errors.New("node version providers not supplied")
 	}
 	if parameters.submitter == nil {
 		return nil, errors.New("submitter not supplied")

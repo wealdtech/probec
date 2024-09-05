@@ -1,4 +1,4 @@
-// Copyright © 2022 Weald Technology Trading.
+// Copyright © 2022, 2024 Weald Technology Trading.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	consensusclient "github.com/attestantio/go-eth2-client"
+	"github.com/attestantio/go-eth2-client/api"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/pkg/errors"
@@ -74,8 +75,8 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		attestationSummaries: make(map[phase0.Slot]map[string]*attestationSummary),
 	}
 
-	for name, eventsProvider := range parameters.eventsProviders {
-		if err := s.monitorEvents(ctx, name, eventsProvider); err != nil {
+	for address, eventsProvider := range parameters.eventsProviders {
+		if err := s.monitorEvents(ctx, address, eventsProvider, parameters.nodeVersionProviders[address]); err != nil {
 			return nil, err
 		}
 	}
@@ -83,8 +84,9 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 }
 
 func (s *Service) monitorEvents(ctx context.Context,
-	name string,
+	address string,
 	eventsProvider consensusclient.EventsProvider,
+	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
 	if err := eventsProvider.Events(ctx, []string{"attestation"}, func(event *apiv1.Event) {
 		data := event.Data.(*phase0.Attestation)
@@ -98,9 +100,9 @@ func (s *Service) monitorEvents(ctx context.Context,
 		// We treat attestations differently depending on if they are individual or aggregate.
 		validators := data.AggregationBits.Count()
 		if validators == 1 {
-			s.handleAttestation(ctx, name, data, delay)
+			s.handleAttestation(ctx, address, data, delay)
 		} else {
-			s.handleAggregateAttestation(ctx, name, data, delay)
+			s.handleAggregateAttestation(ctx, address, nodeVersionProvider, data, delay)
 		}
 	}); err != nil {
 		return errors.Wrap(err, "failed to create events provider")
@@ -110,7 +112,7 @@ func (s *Service) monitorEvents(ctx context.Context,
 }
 
 func (s *Service) handleAttestation(ctx context.Context,
-	name string,
+	address string,
 	attestation *phase0.Attestation,
 	delay time.Duration,
 ) {
@@ -138,10 +140,10 @@ func (s *Service) handleAttestation(ctx context.Context,
 		}
 		slotSummaries[key] = summary
 	}
-	buckets, exists := summary.buckets[name]
+	buckets, exists := summary.buckets[address]
 	if !exists {
 		buckets = &[120]bitfield.Bitlist{}
-		summary.buckets[name] = buckets
+		summary.buckets[address] = buckets
 	}
 	if buckets[bucket] == nil {
 		buckets[bucket] = attestation.AggregationBits
@@ -204,13 +206,21 @@ func (s *Service) handleAttestation(ctx context.Context,
 }
 
 func (s *Service) handleAggregateAttestation(ctx context.Context,
-	name string,
+	address string,
+	nodeVersionProvider consensusclient.NodeVersionProvider,
 	attestation *phase0.Attestation,
 	delay time.Duration,
 ) {
+	nodeVersionResponse, err := nodeVersionProvider.NodeVersion(ctx, &api.NodeVersionOpts{})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to obtain node version")
+		return
+	}
+
 	// Build and send the data.
-	body := fmt.Sprintf(`{"source":"%s","method":"attestation event","slot":"%d","committee_index":"%d","beacon_block_root":"%#x","source_root":"%#x","target_root":"%#x","aggregation_bits":"%#x","delay_ms":"%d"}`,
-		name,
+	body := fmt.Sprintf(
+		`{"source":"%s","method":"attestation event","slot":"%d","committee_index":"%d","beacon_block_root":"%#x","source_root":"%#x","target_root":"%#x","aggregation_bits":"%#x","delay_ms":"%d"}`,
+		nodeVersionResponse.Data,
 		attestation.Data.Slot,
 		attestation.Data.Index,
 		attestation.Data.BeaconBlockRoot,

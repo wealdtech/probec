@@ -102,7 +102,7 @@ func (s *Service) monitorEvents(ctx context.Context,
 		if validators == 1 {
 			s.handleAttestation(ctx, address, data, delay)
 		} else {
-			s.handleAggregateAttestation(ctx, address, nodeVersionProvider, data, delay)
+			s.handleAggregateAttestation(ctx, nodeVersionProvider, data, delay)
 		}
 	}); err != nil {
 		return errors.Wrap(err, "failed to create events provider")
@@ -206,7 +206,6 @@ func (s *Service) handleAttestation(ctx context.Context,
 }
 
 func (s *Service) handleAggregateAttestation(ctx context.Context,
-	address string,
 	nodeVersionProvider consensusclient.NodeVersionProvider,
 	attestation *phase0.Attestation,
 	delay time.Duration,

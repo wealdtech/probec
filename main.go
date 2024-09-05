@@ -312,7 +312,7 @@ func logModules() {
 
 func runCommands(_ context.Context) {
 	if viper.GetBool("version") {
-		fmt.Printf("%s\n", ReleaseVersion)
+		fmt.Fprintf(os.Stdout, "%s\n", ReleaseVersion)
 		os.Exit(0)
 	}
 }

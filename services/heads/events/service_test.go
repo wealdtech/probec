@@ -55,6 +55,9 @@ func TestService(t *testing.T) {
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
 					"test": mockClient,
 				}),
+				events.WithNodeVersionProviders(map[string]consensusclient.NodeVersionProvider{
+					"test": mockClient,
+				}),
 				events.WithSubmitter(submitter),
 			},
 			err: "problem with parameters: monitor not supplied",
@@ -67,6 +70,9 @@ func TestService(t *testing.T) {
 					"test": mockClient,
 				}),
 				events.WithSubmitter(submitter),
+				events.WithNodeVersionProviders(map[string]consensusclient.NodeVersionProvider{
+					"test": mockClient,
+				}),
 			},
 			err: "problem with parameters: chain time service not supplied",
 		},
@@ -76,9 +82,24 @@ func TestService(t *testing.T) {
 				events.WithLogLevel(zerolog.Disabled),
 				events.WithChainTime(chainTime),
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{}),
+				events.WithNodeVersionProviders(map[string]consensusclient.NodeVersionProvider{
+					"test": mockClient,
+				}),
 				events.WithSubmitter(submitter),
 			},
 			err: "problem with parameters: events providers not supplied",
+		},
+		{
+			name: "NodeVersionProvidersMissing",
+			params: []events.Parameter{
+				events.WithLogLevel(zerolog.Disabled),
+				events.WithChainTime(chainTime),
+				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
+					"test": mockClient,
+				}),
+				events.WithSubmitter(submitter),
+			},
+			err: "problem with parameters: node version providers not supplied",
 		},
 		{
 			name: "SubmitterMissing",
@@ -86,6 +107,9 @@ func TestService(t *testing.T) {
 				events.WithLogLevel(zerolog.Disabled),
 				events.WithChainTime(chainTime),
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
+					"test": mockClient,
+				}),
+				events.WithNodeVersionProviders(map[string]consensusclient.NodeVersionProvider{
 					"test": mockClient,
 				}),
 			},
@@ -97,6 +121,9 @@ func TestService(t *testing.T) {
 				events.WithLogLevel(zerolog.Disabled),
 				events.WithChainTime(chainTime),
 				events.WithEventsProviders(map[string]consensusclient.EventsProvider{
+					"test": mockClient,
+				}),
+				events.WithNodeVersionProviders(map[string]consensusclient.NodeVersionProvider{
 					"test": mockClient,
 				}),
 				events.WithSubmitter(submitter),

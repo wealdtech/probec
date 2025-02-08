@@ -35,6 +35,7 @@ type Service struct {
 	bellatrixForkEpoch           phase0.Epoch
 	capellaForkEpoch             phase0.Epoch
 	denebForkEpoch               phase0.Epoch
+	electraForkEpoch             phase0.Epoch
 }
 
 // module-wide log.
@@ -113,6 +114,12 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		denebForkEpoch = 0xffffffffffffffff
 	}
 	log.Trace().Uint64("epoch", uint64(denebForkEpoch)).Msg("Obtained Deneb fork epoch")
+	electraForkEpoch, err := fetchElectraForkEpoch(ctx, parameters.specProvider)
+	if err != nil {
+		// Set to far future epoch.
+		electraForkEpoch = 0xffffffffffffffff
+	}
+	log.Trace().Uint64("epoch", uint64(electraForkEpoch)).Msg("Obtained Electra fork epoch")
 
 	s := &Service{
 		genesisTime:                  genesisResponse.Data.GenesisTime,
@@ -123,6 +130,7 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		bellatrixForkEpoch:           bellatrixForkEpoch,
 		capellaForkEpoch:             capellaForkEpoch,
 		denebForkEpoch:               denebForkEpoch,
+		electraForkEpoch:             electraForkEpoch,
 	}
 
 	return s, nil
@@ -345,6 +353,32 @@ func fetchDenebForkEpoch(ctx context.Context,
 	if !isEpoch {
 		//nolint:revive
 		return 0, errors.New("DENEB_FORK_EPOCH is not a uint64!")
+	}
+
+	return phase0.Epoch(epoch), nil
+}
+
+func fetchElectraForkEpoch(ctx context.Context,
+	specProvider eth2client.SpecProvider,
+) (
+	phase0.Epoch,
+	error,
+) {
+	// Fetch the fork version.
+	specResponse, err := specProvider.Spec(ctx, &api.SpecOpts{})
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to obtain spec")
+	}
+	spec := specResponse.Data
+
+	tmp, exists := spec["ELECTRA_FORK_EPOCH"]
+	if !exists {
+		return 0, errors.New("electra fork version not known by chain")
+	}
+	epoch, isEpoch := tmp.(uint64)
+	if !isEpoch {
+		//nolint:revive
+		return 0, errors.New("ELECTRA_FORK_EPOCH is not a uint64!")
 	}
 
 	return phase0.Epoch(epoch), nil

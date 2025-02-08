@@ -18,20 +18,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/attestantio/go-eth2-client/api"
+	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
+	"github.com/attestantio/go-eth2-client/mock"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 	"github.com/wealdtech/probec/services/chaintime"
 	"github.com/wealdtech/probec/services/chaintime/standard"
-	"github.com/wealdtech/probec/testing/mock"
 )
 
 func TestService(t *testing.T) {
-	genesisTime := time.Now()
+	ctx := context.Background()
 
-	mockGenesisProvider := mock.NewGenesisProvider(genesisTime)
-	mockSpecProvider := mock.NewSpecProvider()
-	mockForkScheduleProvider := mock.NewForkScheduleProvider()
+	genesisTime := time.Now()
+	client, err := mock.New(ctx)
+	require.NoError(t, err)
+	client.GenesisFunc = func(context.Context, *api.GenesisOpts) (*api.Response[*apiv1.Genesis], error) {
+		return &api.Response[*apiv1.Genesis]{
+			Data: &apiv1.Genesis{
+				GenesisTime: genesisTime,
+			},
+			Metadata: make(map[string]any),
+		}, nil
+	}
 
 	tests := []struct {
 		name   string
@@ -42,8 +52,8 @@ func TestService(t *testing.T) {
 			name: "GenesisProviderMissing",
 			params: []standard.Parameter{
 				standard.WithLogLevel(zerolog.Disabled),
-				standard.WithSpecProvider(mockSpecProvider),
-				standard.WithForkScheduleProvider(mockForkScheduleProvider),
+				standard.WithSpecProvider(client),
+				standard.WithForkScheduleProvider(client),
 			},
 			err: "problem with parameters: no genesis provider specified",
 		},
@@ -51,8 +61,8 @@ func TestService(t *testing.T) {
 			name: "SpecProviderMissing",
 			params: []standard.Parameter{
 				standard.WithLogLevel(zerolog.Disabled),
-				standard.WithGenesisProvider(mockGenesisProvider),
-				standard.WithForkScheduleProvider(mockForkScheduleProvider),
+				standard.WithGenesisProvider(client),
+				standard.WithForkScheduleProvider(client),
 			},
 			err: "problem with parameters: no spec provider specified",
 		},
@@ -60,8 +70,8 @@ func TestService(t *testing.T) {
 			name: "ForkScheduleProviderMissing",
 			params: []standard.Parameter{
 				standard.WithLogLevel(zerolog.Disabled),
-				standard.WithGenesisProvider(mockGenesisProvider),
-				standard.WithSpecProvider(mockSpecProvider),
+				standard.WithGenesisProvider(client),
+				standard.WithSpecProvider(client),
 			},
 			err: "problem with parameters: no fork schedule provider specified",
 		},
@@ -69,16 +79,16 @@ func TestService(t *testing.T) {
 			name: "Good",
 			params: []standard.Parameter{
 				standard.WithLogLevel(zerolog.Disabled),
-				standard.WithGenesisProvider(mockGenesisProvider),
-				standard.WithSpecProvider(mockSpecProvider),
-				standard.WithForkScheduleProvider(mockForkScheduleProvider),
+				standard.WithGenesisProvider(client),
+				standard.WithSpecProvider(client),
+				standard.WithForkScheduleProvider(client),
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := standard.New(context.Background(), test.params...)
+			_, err := standard.New(ctx, test.params...)
 			if test.err != "" {
 				require.EqualError(t, err, test.err)
 			} else {
@@ -90,14 +100,25 @@ func TestService(t *testing.T) {
 
 // createService is a helper that creates a mock chaintime service.
 func createService(genesisTime time.Time) (chaintime.Service, error) {
-	mockGenesisProvider := mock.NewGenesisProvider(genesisTime)
-	mockSpecProvider := mock.NewSpecProvider()
-	mockForkScheduleProvider := mock.NewForkScheduleProvider()
+	ctx := context.Background()
+
+	client, err := mock.New(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client.GenesisFunc = func(context.Context, *api.GenesisOpts) (*api.Response[*apiv1.Genesis], error) {
+		return &api.Response[*apiv1.Genesis]{
+			Data: &apiv1.Genesis{
+				GenesisTime: genesisTime,
+			},
+			Metadata: make(map[string]any),
+		}, nil
+	}
 
 	return standard.New(context.Background(),
-		standard.WithGenesisProvider(mockGenesisProvider),
-		standard.WithSpecProvider(mockSpecProvider),
-		standard.WithForkScheduleProvider(mockForkScheduleProvider),
+		standard.WithGenesisProvider(client),
+		standard.WithSpecProvider(client),
+		standard.WithForkScheduleProvider(client),
 	)
 }
 

@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:1.18-buster as builder
+FROM --platform=linux/amd64 golang:1.22-bookwork as builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY . .
 
 RUN go build
 
-FROM --platform=linux/amd64 debian:buster-slim
+FROM --platform=linux/amd64 debian:bookwork-slim
 
 WORKDIR /app
 

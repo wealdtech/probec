@@ -153,13 +153,11 @@ func (s *Service) SlotsPerEpoch() uint64 {
 
 // StartOfSlot provides the time at which a given slot starts.
 func (s *Service) StartOfSlot(slot phase0.Slot) time.Time {
-	//nolint:gosec
 	return s.genesisTime.Add(time.Duration(slot) * s.slotDuration)
 }
 
 // StartOfEpoch provides the time at which a given epoch starts.
 func (s *Service) StartOfEpoch(epoch phase0.Epoch) time.Time {
-	//nolint:gosec
 	return s.genesisTime.Add(time.Duration(uint64(epoch)*s.slotsPerEpoch) * s.slotDuration)
 }
 
@@ -168,6 +166,7 @@ func (s *Service) CurrentSlot() phase0.Slot {
 	if s.genesisTime.After(time.Now()) {
 		return 0
 	}
+
 	return phase0.Slot(uint64(time.Since(s.genesisTime).Seconds()) / uint64(s.slotDuration.Seconds()))
 }
 
@@ -212,6 +211,7 @@ func (s *Service) TimestampToSlot(timestamp time.Time) phase0.Slot {
 		return 0
 	}
 	secondsSinceGenesis := uint64(timestamp.Sub(s.genesisTime).Seconds())
+
 	return phase0.Slot(secondsSinceGenesis / uint64(s.slotDuration.Seconds()))
 }
 
@@ -221,6 +221,7 @@ func (s *Service) TimestampToEpoch(timestamp time.Time) phase0.Epoch {
 		return 0
 	}
 	secondsSinceGenesis := uint64(timestamp.Sub(s.genesisTime).Seconds())
+
 	return phase0.Epoch(secondsSinceGenesis / uint64(s.slotDuration.Seconds()) / s.slotsPerEpoch)
 }
 
@@ -231,6 +232,7 @@ func (s *Service) FirstEpochOfSyncPeriod(period uint64) phase0.Epoch {
 	if epoch < s.altairForkEpoch {
 		epoch = s.altairForkEpoch
 	}
+
 	return epoch
 }
 

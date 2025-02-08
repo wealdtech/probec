@@ -39,6 +39,7 @@ func registerMetrics(ctx context.Context, monitor metrics.Service) error {
 	if monitor.Presenter() == "prometheus" {
 		return registerPrometheusMetrics(ctx)
 	}
+
 	return nil
 }
 
@@ -83,6 +84,7 @@ func registerPrometheusMetrics(_ context.Context) error {
 		Name:      "events_total",
 		Help:      "The number of attestation events received.",
 	})
+
 	return prometheus.Register(eventsReceived)
 }
 

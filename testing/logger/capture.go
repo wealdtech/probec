@@ -39,6 +39,7 @@ func (c *LogCapture) Write(p []byte) (int, error) {
 	c.mu.Lock()
 	c.entries = append(c.entries, entry)
 	c.mu.Unlock()
+
 	return len(p), nil
 }
 
@@ -50,6 +51,7 @@ func NewLogCapture() *LogCapture {
 	}
 	logger := zerolog.New(c)
 	zerologger.Logger = logger
+
 	return c
 }
 
@@ -80,12 +82,13 @@ func (c *LogCapture) HasLog(fields map[string]interface{}) bool {
 			break
 		}
 	}
+
 	return matched
 }
 
 // hasField returns true if the entry has a matching field.
 //
-//nolint:gocyclo
+//nolint:forcetypeassert
 func (c *LogCapture) hasField(entry map[string]interface{}, key string, value interface{}) bool {
 	for entryKey, entryValue := range entry {
 		if entryKey != key {
@@ -93,61 +96,33 @@ func (c *LogCapture) hasField(entry map[string]interface{}, key string, value in
 		}
 		switch v := value.(type) {
 		case bool:
-			if entryValue == v {
-				return true
-			}
+			return entryValue == v
 		case string:
-			if entryValue == value.(string) {
-				return true
-			}
+			return entryValue == value.(string)
 		case int:
-			if int(entryValue.(float64)) == v {
-				return true
-			}
+			return int(entryValue.(float64)) == v
 		case int8:
-			if int8(entryValue.(float64)) == v {
-				return true
-			}
+			return int8(entryValue.(float64)) == v
 		case int16:
-			if int16(entryValue.(float64)) == v {
-				return true
-			}
+			return int16(entryValue.(float64)) == v
 		case int32:
-			if int32(entryValue.(float64)) == v {
-				return true
-			}
+			return int32(entryValue.(float64)) == v
 		case int64:
-			if int64(entryValue.(float64)) == v {
-				return true
-			}
+			return int64(entryValue.(float64)) == v
 		case uint:
-			if uint(entryValue.(float64)) == v {
-				return true
-			}
+			return uint(entryValue.(float64)) == v
 		case uint8:
-			if uint8(entryValue.(float64)) == v {
-				return true
-			}
+			return uint8(entryValue.(float64)) == v
 		case uint16:
-			if uint16(entryValue.(float64)) == v {
-				return true
-			}
+			return uint16(entryValue.(float64)) == v
 		case uint32:
-			if uint32(entryValue.(float64)) == v {
-				return true
-			}
+			return uint32(entryValue.(float64)) == v
 		case uint64:
-			if uint64(entryValue.(float64)) == v {
-				return true
-			}
+			return uint64(entryValue.(float64)) == v
 		case float32:
-			if float32(entryValue.(float64)) == v {
-				return true
-			}
+			return float32(entryValue.(float64)) == v
 		case float64:
-			if entryValue.(float64) == v {
-				return true
-			}
+			return entryValue.(float64) == v
 		default:
 			panic("unhandled type")
 		}

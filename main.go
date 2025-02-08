@@ -104,6 +104,7 @@ func main2() int {
 	}
 
 	log.Info().Msg("Stopping probec")
+
 	return 0
 }
 
@@ -181,6 +182,7 @@ func startMonitor(ctx context.Context) (metrics.Service, error) {
 		log.Debug().Msg("No metrics service supplied; monitor not starting")
 		monitor = &nullmetrics.Service{}
 	}
+
 	return monitor, nil
 }
 

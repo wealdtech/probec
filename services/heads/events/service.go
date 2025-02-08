@@ -64,6 +64,7 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 			return nil, err
 		}
 	}
+
 	return s, nil
 }
 
@@ -72,7 +73,11 @@ func (s *Service) monitorEvents(ctx context.Context,
 	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
 	if err := eventsProvider.Events(ctx, []string{"head"}, func(event *apiv1.Event) {
-		data := event.Data.(*apiv1.HeadEvent)
+		data, isData := event.Data.(*apiv1.HeadEvent)
+		if !isData {
+			log.Error().Msg("Event data not of expected type")
+			return
+		}
 		delay := time.Since(s.chainTime.StartOfSlot(data.Slot))
 
 		// Ensure the node is synced.

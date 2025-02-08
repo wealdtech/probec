@@ -80,6 +80,7 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 			return nil, err
 		}
 	}
+
 	return s, nil
 }
 
@@ -89,7 +90,11 @@ func (s *Service) monitorEvents(ctx context.Context,
 	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
 	if err := eventsProvider.Events(ctx, []string{"attestation"}, func(event *apiv1.Event) {
-		data := event.Data.(*phase0.Attestation)
+		data, isData := event.Data.(*phase0.Attestation)
+		if !isData {
+			log.Error().Msg("Event data not of expected type")
+			return
+		}
 		delay := time.Since(s.chainTime.StartOfSlot(data.Data.Slot))
 		if delay.Seconds() < 0 || delay.Seconds() > 12 {
 			log.Trace().Uint64("slot", uint64(data.Data.Slot)).Stringer("delay", delay).Msg("Delay out of range, ignoring")
@@ -122,7 +127,12 @@ func (s *Service) handleAttestation(ctx context.Context,
 		return
 	}
 
-	key := fmt.Sprintf("%d:%x:%x:%x", attestation.Data.Index, attestation.Data.BeaconBlockRoot, attestation.Data.Source.Root, attestation.Data.Target.Root)
+	key := fmt.Sprintf("%d:%x:%x:%x",
+		attestation.Data.Index,
+		attestation.Data.BeaconBlockRoot,
+		attestation.Data.Source.Root,
+		attestation.Data.Target.Root,
+	)
 	s.attestationsMu.Lock()
 	slotSummaries, exists := s.attestationSummaries[attestation.Data.Slot]
 	if !exists {
@@ -176,7 +186,14 @@ func (s *Service) handleAttestation(ctx context.Context,
 		} else {
 			builder.WriteString(",")
 		}
-		builder.WriteString(fmt.Sprintf(`{"committee_index":"%d","beacon_block_root":"%#x","source_root":"%#x","target_root":"%#x","buckets":`, summary.committee, summary.beaconBlockRoot, summary.sourceRoot, summary.targetRoot))
+		builder.WriteString(
+			fmt.Sprintf(`{"committee_index":"%d","beacon_block_root":"%#x","source_root":"%#x","target_root":"%#x","buckets":`,
+				summary.committee,
+				summary.beaconBlockRoot,
+				summary.sourceRoot,
+				summary.targetRoot,
+			),
+		)
 		builder.WriteString(`{`)
 		firstSource := true
 		for source, sourceBuckets := range summary.buckets {

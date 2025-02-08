@@ -43,6 +43,7 @@ func registerMetrics(_ context.Context, monitor metrics.Service) error {
 	case "null":
 		log.Debug().Msg("No metrics will be generated for this module")
 	}
+
 	return nil
 }
 

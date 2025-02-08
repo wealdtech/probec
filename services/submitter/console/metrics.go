@@ -37,6 +37,7 @@ func registerMetrics(ctx context.Context, monitor metrics.Service) error {
 	if monitor.Presenter() == "prometheus" {
 		return registerPrometheusMetrics(ctx)
 	}
+
 	return nil
 }
 
@@ -45,10 +46,12 @@ func registerPrometheusMetrics(_ context.Context) error {
 		Namespace: "probec",
 		Subsystem: "submitter",
 		Name:      "requests_total",
+		Help:      "Total number of requests submitted",
 	}, []string{"operation", "result"})
 	if err := prometheus.Register(submitterCounter); err != nil {
 		return err
 	}
+
 	return prometheus.Register(submitterTimer)
 }
 

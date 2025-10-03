@@ -72,40 +72,37 @@ func (s *Service) monitorEvents(ctx context.Context,
 	eventsProvider consensusclient.EventsProvider,
 	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
-	if err := eventsProvider.Events(ctx, []string{"block"}, func(event *apiv1.Event) {
-		data, isData := event.Data.(*apiv1.BlockEvent)
-		if !isData {
-			log.Error().Msg("Event data not of expected type")
-			return
-		}
-		delay := time.Since(s.chainTime.StartOfSlot(data.Slot))
+	if err := eventsProvider.Events(ctx, &api.EventsOpts{
+		BlockHandler: func(ctx context.Context, event *apiv1.BlockEvent) {
+			delay := time.Since(s.chainTime.StartOfSlot(event.Slot))
 
-		// Ensure the node is synced.
-		syncingResponse, err := eventsProvider.(consensusclient.NodeSyncingProvider).NodeSyncing(ctx, &api.NodeSyncingOpts{})
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to ascertain if node is syncing")
-			return
-		}
-		if syncingResponse.Data.IsSyncing {
-			log.Debug().Msg("Node is syncing, not sending information")
-		}
+			// Ensure the node is synced.
+			syncingResponse, err := eventsProvider.(consensusclient.NodeSyncingProvider).NodeSyncing(ctx, &api.NodeSyncingOpts{})
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to ascertain if node is syncing")
+				return
+			}
+			if syncingResponse.Data.IsSyncing {
+				log.Debug().Msg("Node is syncing, not sending information")
+			}
 
-		monitorEventProcessed(delay)
+			monitorEventProcessed(delay)
 
-		nodeVersionResponse, err := nodeVersionProvider.NodeVersion(ctx, &api.NodeVersionOpts{})
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to obtain node version")
-			return
-		}
+			nodeVersionResponse, err := nodeVersionProvider.NodeVersion(ctx, &api.NodeVersionOpts{})
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to obtain node version")
+				return
+			}
 
-		// Build and send the data.
-		body := fmt.Sprintf(
-			`{"source":"%s","method":"block event","slot":"%d","delay_ms":"%d"}`,
-			nodeVersionResponse.Data,
-			data.Slot,
-			int(delay.Milliseconds()),
-		)
-		s.submitter.SubmitBlockDelay(ctx, body)
+			// Build and send the data.
+			body := fmt.Sprintf(
+				`{"source":"%s","method":"block event","slot":"%d","delay_ms":"%d"}`,
+				nodeVersionResponse.Data,
+				event.Slot,
+				int(delay.Milliseconds()),
+			)
+			s.submitter.SubmitBlockDelay(ctx, body)
+		},
 	}); err != nil {
 		return errors.Wrap(err, "failed to create events provider")
 	}

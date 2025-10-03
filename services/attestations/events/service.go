@@ -22,7 +22,7 @@ import (
 
 	consensusclient "github.com/attestantio/go-eth2-client"
 	"github.com/attestantio/go-eth2-client/api"
-	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
+	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/pkg/errors"
 	bitfield "github.com/prysmaticlabs/go-bitfield"
@@ -89,26 +89,39 @@ func (s *Service) monitorEvents(ctx context.Context,
 	eventsProvider consensusclient.EventsProvider,
 	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
-	if err := eventsProvider.Events(ctx, []string{"attestation"}, func(event *apiv1.Event) {
-		data, isData := event.Data.(*phase0.Attestation)
-		if !isData {
-			log.Error().Msg("Event data not of expected type")
-			return
-		}
-		delay := time.Since(s.chainTime.StartOfSlot(data.Data.Slot))
-		if delay.Seconds() < 0 || delay.Seconds() > 12 {
-			log.Trace().Uint64("slot", uint64(data.Data.Slot)).Stringer("delay", delay).Msg("Delay out of range, ignoring")
-			return
-		}
-		monitorEventProcessed(delay)
+	if err := eventsProvider.Events(ctx, &api.EventsOpts{
+		AttestationHandler: func(ctx context.Context, event *spec.VersionedAttestation) {
+			data, err := event.Data()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to get attestation data")
+				return
+			}
 
-		// We treat attestations differently depending on if they are individual or aggregate.
-		validators := data.AggregationBits.Count()
-		if validators == 1 {
-			s.handleAttestation(ctx, address, data, delay)
-		} else {
-			s.handleAggregateAttestation(ctx, nodeVersionProvider, data, delay)
-		}
+			delay := time.Since(s.chainTime.StartOfSlot(data.Slot))
+			if delay.Seconds() < 0 || delay.Seconds() > 12 {
+				log.Trace().Uint64("slot", uint64(data.Slot)).Stringer("delay", delay).Msg("Delay out of range, ignoring")
+				return
+			}
+			monitorEventProcessed(delay)
+
+			// We treat attestations differently depending on if they are individual or aggregate.
+			aggregationBits, err := event.AggregationBits()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to get attestation aggregation bits")
+				return
+			}
+			attestation := &phase0.Attestation{
+				AggregationBits: aggregationBits,
+				Data:            data,
+			}
+
+			validators := aggregationBits.Count()
+			if validators == 1 {
+				s.handleAttestation(ctx, address, attestation, delay)
+			} else {
+				s.handleAggregateAttestation(ctx, nodeVersionProvider, attestation, delay)
+			}
+		},
 	}); err != nil {
 		return errors.Wrap(err, "failed to create events provider")
 	}

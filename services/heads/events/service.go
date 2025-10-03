@@ -77,7 +77,12 @@ func (s *Service) monitorEvents(ctx context.Context,
 			delay := time.Since(s.chainTime.StartOfSlot(event.Slot))
 
 			// Ensure the node is synced.
-			syncingResponse, err := eventsProvider.(consensusclient.NodeSyncingProvider).NodeSyncing(ctx, &api.NodeSyncingOpts{})
+			syncingProvider, ok := eventsProvider.(consensusclient.NodeSyncingProvider)
+			if !ok {
+				log.Error().Msg("Node syncing provider not supported")
+				return
+			}
+			syncingResponse, err := syncingProvider.NodeSyncing(ctx, &api.NodeSyncingOpts{})
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to ascertain if node is syncing")
 				return

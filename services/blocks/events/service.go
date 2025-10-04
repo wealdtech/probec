@@ -73,6 +73,7 @@ func (s *Service) monitorEvents(ctx context.Context,
 	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
 	if err := eventsProvider.Events(ctx, &api.EventsOpts{
+		Topics: []string{"block"},
 		BlockHandler: func(ctx context.Context, event *apiv1.BlockEvent) {
 			delay := time.Since(s.chainTime.StartOfSlot(event.Slot))
 

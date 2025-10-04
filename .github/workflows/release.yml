@@ -184,8 +184,8 @@ jobs:
       - name: Compile
         run: |
           go build -v -ldflags="-X github.com/${{ github.repository }}/cmd.ReleaseVersion=${{ needs.env_vars.outputs.release_version }} -extldflags -static"
-          choco install zip
-          zip --junk-paths ${{ needs.env_vars.outputs.binary }}-${{ needs.env_vars.outputs.release_version }}-windows-exe.zip ${{ needs.env_vars.outputs.binary }}.exe
+          choco install -y 7zip
+          7z a -tzip ${{ needs.env_vars.outputs.binary }}-${{ needs.env_vars.outputs.release_version }}-windows-exe.zip ${{ needs.env_vars.outputs.binary }}.exe
           $FileHash=(certutil -hashfile ${{ needs.env_vars.outputs.binary }}-${{ needs.env_vars.outputs.release_version }}-windows-exe.zip SHA256 | findstr /v hash | findstr /v SHA).replace(" ", "")
           echo "$FileHash" > ${{ needs.env_vars.outputs.binary }}-${{ needs.env_vars.outputs.release_version }}-windows-exe-zip.sha256
 

@@ -90,6 +90,7 @@ func (s *Service) monitorEvents(ctx context.Context,
 	nodeVersionProvider consensusclient.NodeVersionProvider,
 ) error {
 	if err := eventsProvider.Events(ctx, &api.EventsOpts{
+		Topics: []string{"attestation"},
 		AttestationHandler: func(ctx context.Context, event *spec.VersionedAttestation) {
 			data, err := event.Data()
 			if err != nil {
